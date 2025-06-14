@@ -34,7 +34,14 @@ client.on('messageCreate', async message => {
 
     // ✅ Nur in Ticket-Channels erlaubt
     if (!message.channel.name.startsWith('kauf-ticket-')) {
-      return message.reply('❌ Dieser Befehl darf nur in einem Kauf-Ticket ausgeführt werden.');
+      const reply = await message.reply('❌ Dieser Befehl darf nur in einem Kauf-Ticket ausgeführt werden.');
+
+      // Nutzer-Nachricht löschen (nach 3 Sek.)
+      setTimeout(() => message.delete().catch(() => {}), 3000);
+      // Bot-Antwort löschen (nach 6 Sek.)
+      setTimeout(() => reply.delete().catch(() => {}), 6000);
+
+      return;
     }
 
     const userId = message.author.id;
@@ -46,18 +53,28 @@ client.on('messageCreate', async message => {
     );
 
     if (!last) {
-      return message.reply('❌ Konnte keine Nachricht mit dem Preis finden.');
+      const reply = await message.reply('❌ Konnte keine Nachricht mit dem Preis finden.');
+      setTimeout(() => message.delete().catch(() => {}), 3000);
+      setTimeout(() => reply.delete().catch(() => {}), 6000);
+      return;
     }
 
     const match = last.content.match(/Option\s+(\d+(?:[.,]\d{1,2})?)€/i);
     if (!match) {
-      return message.reply('❌ Preis konnte nicht ausgelesen werden.');
+      const reply = await message.reply('❌ Preis konnte nicht ausgelesen werden.');
+      setTimeout(() => message.delete().catch(() => {}), 3000);
+      setTimeout(() => reply.delete().catch(() => {}), 6000);
+      return;
     }
 
     const price = match[1].replace(',', '.');
 
     registeredUsers.set(userId, price);
-    message.reply(`✅ Du bist registriert! Zahle hier: ${BASE_URL}/pay?userId=${userId}`);
+    const reply = await message.reply(`✅ Du bist registriert! Zahle hier: ${BASE_URL}/pay?userId=${userId}`);
+
+    // Nutzer-Nachricht & Bot-Antwort löschen (3 Sek. & 6 Sek.)
+    setTimeout(() => message.delete().catch(() => {}), 3000);
+    setTimeout(() => reply.delete().catch(() => {}), 6000);
   }
 });
 
