@@ -31,21 +31,16 @@ client.on('messageCreate', async message => {
   if (message.author.bot) return;
 
   if (message.content.toLowerCase() === '!register') {
-
-    // ✅ Nur in Ticket-Channels erlaubt
-    if (!message.channel.name.startsWith('kauf-ticket-')) {
-      const reply = await message.reply('❌ Dieser Befehl darf nur in einem Kauf-Ticket ausgeführt werden.');
-
-      // Nutzer-Nachricht löschen (nach 3 Sek.)
-      setTimeout(() => message.delete().catch(() => {}), 3000);
-      // Bot-Antwort löschen (nach 6 Sek.)
-      setTimeout(() => reply.delete().catch(() => {}), 6000);
-
-      return;
-    }
-
+    const isTicket = message.channel.name.startsWith('kauf-ticket-');
     const userId = message.author.id;
     const channel = message.channel;
+
+    if (!isTicket) {
+      const reply = await message.reply('❌ Dieser Befehl darf nur in einem Kauf-Ticket ausgeführt werden.');
+      setTimeout(() => message.delete().catch(() => {}), 3000);
+      setTimeout(() => reply.delete().catch(() => {}), 6000);
+      return;
+    }
 
     const messages = await channel.messages.fetch({ limit: 10 });
     const last = messages.find(msg =>
@@ -54,27 +49,20 @@ client.on('messageCreate', async message => {
 
     if (!last) {
       const reply = await message.reply('❌ Konnte keine Nachricht mit dem Preis finden.');
-      setTimeout(() => message.delete().catch(() => {}), 3000);
-      setTimeout(() => reply.delete().catch(() => {}), 6000);
-      return;
+      return; // Keine Löschung im Ticket
     }
 
     const match = last.content.match(/Option\s+(\d+(?:[.,]\d{1,2})?)€/i);
     if (!match) {
       const reply = await message.reply('❌ Preis konnte nicht ausgelesen werden.');
-      setTimeout(() => message.delete().catch(() => {}), 3000);
-      setTimeout(() => reply.delete().catch(() => {}), 6000);
-      return;
+      return; // Keine Löschung im Ticket
     }
 
     const price = match[1].replace(',', '.');
-
     registeredUsers.set(userId, price);
-    const reply = await message.reply(`✅ Du bist registriert! Zahle hier: ${BASE_URL}/pay?userId=${userId}`);
 
-    // Nutzer-Nachricht & Bot-Antwort löschen (3 Sek. & 6 Sek.)
-    setTimeout(() => message.delete().catch(() => {}), 3000);
-    setTimeout(() => reply.delete().catch(() => {}), 6000);
+    const reply = await message.reply(`✅ Du bist registriert! Zahle hier: ${BASE_URL}/pay?userId=${userId}`);
+    // Keine Nachricht wird gelöscht im Ticket-Channel
   }
 });
 
