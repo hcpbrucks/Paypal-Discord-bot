@@ -34,7 +34,7 @@ client.on('messageCreate', async message => {
 
     // ✅ Nur in Ticket-Channels erlaubt
     if (!message.channel.name.startsWith('kauf-ticket-')) {
-      return message.reply('❌ Dieser Befehl darf nur in einem Kauf-Ticket ausgeführt werden.');
+      return message.send('❌ Dieser Befehl darf nur in einem Kauf-Ticket ausgeführt werden.');
     }
 
     const userId = message.author.id;
