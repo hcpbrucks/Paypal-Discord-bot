@@ -29,11 +29,17 @@ client.once('ready', () => {
 
 client.on('messageCreate', async message => {
   if (message.author.bot) return;
+
   if (message.content.toLowerCase() === '!register') {
+
+    // ✅ Nur in Ticket-Channels erlaubt
+    if (!message.channel.name.startsWith('kauf-ticket-')) {
+      return message.reply('❌ Dieser Befehl darf nur in einem Kauf-Ticket ausgeführt werden.');
+    }
+
     const userId = message.author.id;
     const channel = message.channel;
 
-    // Letzte Nachricht vom BotGhost lesen
     const messages = await channel.messages.fetch({ limit: 10 });
     const last = messages.find(msg =>
       msg.author.bot && msg.content.toLowerCase().includes('option')
@@ -59,7 +65,7 @@ client.login(DISCORD_TOKEN);
 
 // === PayPal ===
 paypal.configure({
-  mode: 'live', // Achtung: Jetzt LIVE-Modus!
+  mode: 'live',
   client_id: PAYPAL_CLIENT_ID,
   client_secret: PAYPAL_CLIENT_SECRET
 });
