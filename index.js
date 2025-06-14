@@ -1,5 +1,4 @@
 const express = require('express');
-
 const paypal = require('paypal-rest-sdk');
 const { Client, GatewayIntentBits } = require('discord.js');
 
@@ -32,12 +31,10 @@ client.on('messageCreate', async message => {
   if (message.author.bot) return;
 
   if (message.content.toLowerCase() === '!register') {
-    // ✅ Nur in Kauf-Ticket-Channels erlaubt
-    const channelName = message.channel.name.toLowerCase();
-    const forbiddenChannels = ['chat', 'hilfe', 'reviews'];
 
-    if (!channelName.startsWith('kauf-ticket-') || forbiddenChannels.includes(channelName)) {
-      return message.reply('❌ Dieser Befehl darf nur in einem Kauf-Ticket-Channel verwendet werden (z. B. „kauf-ticket-123“).');
+    // ✅ Nur in Ticket-Channels erlaubt
+    if (!message.channel.name.startsWith('kauf-ticket-')) {
+      return message.reply('❌ Dieser Befehl darf nur in einem Kauf-Ticket ausgeführt werden.');
     }
 
     const userId = message.author.id;
@@ -110,4 +107,41 @@ app.get('/pay', (req, res) => {
     return res.send('❌ Keine Weiterleitung möglich.');
   });
 });
-;
+
+app.get('/success', async (req, res) => {
+  const { PayerID: payerId, paymentId, userId } = req.query;
+  const amount = registeredUsers.get(userId);
+
+  const execute_payment_json = {
+    payer_id: payerId,
+    transactions: [{
+      amount: { currency: 'EUR', total: amount }
+    }]
+  };
+
+  paypal.payment.execute(paymentId, execute_payment_json, async (error, payment) => {
+    if (error) {
+      console.error(error.response);
+      return res.send('❌ Zahlung fehlgeschlagen.');
+    }
+
+    try {
+      const guild = await client.guilds.fetch(GUILD_ID);
+      const member = await guild.members.fetch(userId);
+      await member.roles.add(ROLE_ID);
+      res.send('✅ Zahlung erfolgreich! Deine Discord-Rolle wurde vergeben.');
+    } catch (err) {
+      console.error('❌ Fehler beim Rollen vergeben:', err);
+      res.send('❌ Zahlung erfolgreich, aber Fehler beim Rollen vergeben.');
+    }
+  });
+});
+
+app.get('/cancel', (req, res) => {
+  res.send('❌ Zahlung wurde abgebrochen.');
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`🌐 Server läuft auf Port ${PORT}`);
+});
