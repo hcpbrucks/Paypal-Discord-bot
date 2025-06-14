@@ -7,7 +7,7 @@ const GUILD_ID = '1381009607123796069';
 const ROLE_ID = '1381289636952932352';
 const PAYPAL_CLIENT_ID = 'AQYB9y5a6UIUUabcti0aRyydn90q-_IUJxKFNoqEaeZWt19wQir2zpEaABT21rD5XSYNyyniSaB2l9Pk';
 const PAYPAL_CLIENT_SECRET = 'EB6wUs5ki6kJHVkWXNCihMvRR_kC-Jbvp3U0g6EsOQ12LYtjRH6oLJSJdPlb319tAeR_qb9VoEGt2CN-';
-const BASE_URL = 'https://8c19823d-522d-415f-af34-28aaaac074e5-00-33ly12zdo5ip4.kirk.replit.dev';
+const BASE_URL = 'https://paypal-discord-bot.onrender.com';
 
 const app = express();
 app.use(express.json());
