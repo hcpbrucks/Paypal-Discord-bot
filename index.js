@@ -52,7 +52,7 @@ client.on('messageCreate', async message => {
       return; // Keine Löschung im Ticket
     }
 
-    const match = last.content.match(/Option\s+(\d+(?:[.,]\d{1,2})?)€/i);
+   const match = last.content.match(/(\d+(?:[.,]\d{1,2})?)€/);
     if (!match) {
       const reply = await message.reply('❌ Preis konnte nicht ausgelesen werden.');
       return; // Keine Löschung im Ticket
