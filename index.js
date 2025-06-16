@@ -27,43 +27,39 @@ client.once('ready', () => {
   console.log(`✅ Discord Bot ist online als ${client.user.tag}`);
 });
 
+// Ersetzter messageCreate-Handler:
 client.on('messageCreate', async message => {
   if (message.author.bot) return;
+  if (message.content.toLowerCase() !== '!register') return;
 
-  if (message.content.toLowerCase() === '!register') {
-    const isTicket = message.channel.name.startsWith('kauf-ticket-');
-    const userId = message.author.id;
-    const channel = message.channel;
+  const userId = message.author.id;
+  const channel = message.channel;
 
-    if (!isTicket) {
-      const reply = await message.reply('❌ Dieser Befehl darf nur in einem Kauf-Ticket ausgeführt werden.');
-      setTimeout(() => message.delete().catch(() => {}), 3000);
-      setTimeout(() => reply.delete().catch(() => {}), 6000);
-      return;
-    }
-
-    const messages = await channel.messages.fetch({ limit: 10 });
-    const last = messages.find(msg =>
-      msg.author.bot && msg.content.toLowerCase().includes('option')
-    );
-
-    if (!last) {
-      const reply = await message.reply('❌ Konnte keine Nachricht mit dem Preis finden.');
-      return; // Keine Löschung im Ticket
-    }
-
-   const match = last.content.match(/(\d+(?:[.,]\d{1,2})?)€/);
-    if (!match) {
-      const reply = await message.reply('❌ Preis konnte nicht ausgelesen werden.');
-      return; // Keine Löschung im Ticket
-    }
-
-    const price = match[1].replace(',', '.');
-    registeredUsers.set(userId, price);
-
-    const reply = await message.reply(`✅ Du bist registriert! Zahle hier: ${BASE_URL}/pay?userId=${userId}`);
-    // Keine Nachricht wird gelöscht im Ticket-Channel
+  // ✅ Nur in Ticket-Kanälen erlauben
+  if (!channel.name.startsWith('kauf-ticket-')) {
+    return message.reply('❌ Dieser Befehl darf nur in einem Kauf-Ticket ausgeführt werden.');
   }
+
+  // ✅ Letzte Nachricht vom BotGhost oder anderem Bot lesen
+  const messages = await channel.messages.fetch({ limit: 10 });
+  const last = messages.find(msg =>
+    msg.author.bot && /(\d+[.,]?\d*)€/.test(msg.content)
+  );
+
+  if (!last) {
+    return message.reply('❌ Konnte keine Nachricht mit dem Preis finden.');
+  }
+
+  // ✅ Betrag extrahieren
+  const match = last.content.match(/(\d+[.,]?\d*)€/);
+  if (!match) {
+    return message.reply('❌ Preis konnte nicht ausgelesen werden.');
+  }
+
+  const price = match[1].replace(',', '.');
+  registeredUsers.set(userId, price);
+
+  message.reply(`✅ Du bist registriert! Zahle hier: ${BASE_URL}/pay?userId=${userId}`);
 });
 
 client.login(DISCORD_TOKEN);
