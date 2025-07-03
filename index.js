@@ -47,9 +47,9 @@ client.on('messageCreate', async message => {
 
   // ✅ Letzte Nachricht mit Preis suchen
   const messages = await channel.messages.fetch({ limit: 10 });
-  const last = messages.find(msg =>
-    msg.author.bot && /(\d+[.,]?\d*)€/.test(msg.content)
-  );
+  const last = messages
+    .filter(msg => msg.author.bot && /(\d+[.,]?\d*)€/.test(msg.content))
+    .first();
 
   if (!last) {
     return message.reply('❌ Konnte keine Nachricht mit dem Preis finden.');
@@ -117,6 +117,10 @@ app.get('/success', async (req, res) => {
   const { PayerID: payerId, paymentId, userId } = req.query;
   const amount = registeredUsers.get(userId);
 
+  if (!userId || !amount || !payerId || !paymentId) {
+    return res.send('❌ Ungültiger Zahlungsversuch.');
+  }
+
   const execute_payment_json = {
     payer_id: payerId,
     transactions: [{
@@ -137,7 +141,7 @@ app.get('/success', async (req, res) => {
       res.send('✅ Zahlung erfolgreich! Deine Discord-Rolle wurde vergeben.');
     } catch (err) {
       console.error('❌ Fehler beim Rollen vergeben:', err);
-      res.send('❌ Zahlung erfolgreich, aber Fehler beim Rollen vergeben.');
+      res.send('✅ Zahlung erfolgreich, aber Fehler beim Rollen vergeben.');
     }
   });
 });
@@ -149,4 +153,4 @@ app.get('/cancel', (req, res) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🌐 Server läuft auf Port ${PORT}`);
-});;
+});
