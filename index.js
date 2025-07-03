@@ -2,12 +2,10 @@ const express = require('express');
 const paypal = require('paypal-rest-sdk');
 const { Client, GatewayIntentBits } = require('discord.js');
 
-// ✅ Umgebungsvariablen aus Render
+// ✅ Umgebungsvariablen von Render (außer PayPal-Daten)
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const GUILD_ID = process.env.GUILD_ID;
 const ROLE_ID = process.env.ROLE_ID;
-const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
-const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET;
 const BASE_URL = process.env.BASE_URL;
 
 const app = express();
@@ -47,9 +45,9 @@ client.on('messageCreate', async message => {
 
   // ✅ Letzte Nachricht mit Preis suchen
   const messages = await channel.messages.fetch({ limit: 10 });
-  const last = messages
-    .filter(msg => msg.author.bot && /(\d+[.,]?\d*)€/.test(msg.content))
-    .first();
+  const last = messages.find(msg =>
+    msg.author.bot && /(\d+[.,]?\d*)€/.test(msg.content)
+  );
 
   if (!last) {
     return message.reply('❌ Konnte keine Nachricht mit dem Preis finden.');
@@ -68,11 +66,11 @@ client.on('messageCreate', async message => {
 
 client.login(DISCORD_TOKEN);
 
-// === PayPal Konfiguration ===
+// === PayPal Konfiguration mit festen Sandbox-Daten ===
 paypal.configure({
-  mode: 'live', // oder 'sandbox' für Tests
-  client_id: PAYPAL_CLIENT_ID,
-  client_secret: PAYPAL_CLIENT_SECRET
+  mode: 'live', // WICHTIG: Sandbox-Modus
+  client_id: 'AQYB9y5a6UIUUabcti0aRyydn90q-_IUJxKFNoqEaeZWt19wQir2zpEaABT21rD5XSYNyyniSaB2l9Pk',
+  client_secret: 'AQYB9y5a6UIUUabcti0aRyydn90q-_IUJxKFNoqEaeZWt19wQir2zpEaABT21rD5XSYNyyniSaB2l9Pk'
 });
 
 // === Express Webserver ===
@@ -117,10 +115,6 @@ app.get('/success', async (req, res) => {
   const { PayerID: payerId, paymentId, userId } = req.query;
   const amount = registeredUsers.get(userId);
 
-  if (!userId || !amount || !payerId || !paymentId) {
-    return res.send('❌ Ungültiger Zahlungsversuch.');
-  }
-
   const execute_payment_json = {
     payer_id: payerId,
     transactions: [{
@@ -141,7 +135,7 @@ app.get('/success', async (req, res) => {
       res.send('✅ Zahlung erfolgreich! Deine Discord-Rolle wurde vergeben.');
     } catch (err) {
       console.error('❌ Fehler beim Rollen vergeben:', err);
-      res.send('✅ Zahlung erfolgreich, aber Fehler beim Rollen vergeben.');
+      res.send('❌ Zahlung erfolgreich, aber Fehler beim Rollen vergeben.');
     }
   });
 });
