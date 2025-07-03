@@ -24,7 +24,7 @@ const client = new Client({
 const registeredUsers = new Map();
 
 client.once('ready', () => {
-  console.log(`✅ Discord Bot online als ${client.user.tag}`);
+  console.log(`✅ Discord Bot ist online als ${client.user.tag}`);
 });
 
 // Ersetzter messageCreate-Handler:
