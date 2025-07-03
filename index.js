@@ -1,7 +1,14 @@
 const express = require('express');
 const paypal = require('paypal-rest-sdk');
 const { Client, GatewayIntentBits } = require('discord.js');
-require('dotenv').config();
+
+// ✅ Umgebungsvariablen aus Render
+const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
+const GUILD_ID = process.env.GUILD_ID;
+const ROLE_ID = process.env.ROLE_ID;
+const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
+const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET;
+const BASE_URL = process.env.BASE_URL;
 
 const app = express();
 app.use(express.json());
@@ -17,68 +24,58 @@ const client = new Client({
 
 const registeredUsers = new Map();
 
-// === Discord-Login ===
 client.once('ready', () => {
-  console.log(`✅ Bot ist online als ${client.user.tag}`);
+  console.log(`✅ Discord Bot ist online als ${client.user.tag}`);
 });
 
 client.on('messageCreate', async message => {
   if (message.author.bot) return;
-  if (message.content.toLowerCase() !== '!register') return;
-
   const userId = message.author.id;
   const channel = message.channel;
 
-  const isKaufTicket = channel.name.startsWith('kauf-ticket-');
+  if (message.content.toLowerCase() !== '!register') return;
 
+  // ✅ Wenn kein Kauf-Ticket: Nachricht löschen
+  if (!channel.name.startsWith('kauf-ticket-')) {
+    const reply = await message.reply('❌ Dieser Befehl darf nur in einem Kauf-Ticket verwendet werden.');
+    setTimeout(() => {
+      message.delete().catch(() => {});
+      reply.delete().catch(() => {});
+    }, 10000);
+    return;
+  }
+
+  // ✅ Letzte Nachricht mit Preis suchen
   const messages = await channel.messages.fetch({ limit: 10 });
-  const last = messages.find(msg => msg.author.bot && /(\d+[.,]?\d*)€/.test(msg.content));
+  const last = messages.find(msg =>
+    msg.author.bot && /(\d+[.,]?\d*)€/.test(msg.content)
+  );
 
   if (!last) {
-    const reply = await message.reply('❌ Konnte keine Nachricht mit dem Preis finden.');
-    if (!isKaufTicket) {
-      setTimeout(() => {
-        reply.delete().catch(() => {});
-        message.delete().catch(() => {});
-      }, 10_000);
-    }
-    return;
+    return message.reply('❌ Konnte keine Nachricht mit dem Preis finden.');
   }
 
   const match = last.content.match(/(\d+[.,]?\d*)€/);
   if (!match) {
-    const reply = await message.reply('❌ Preis konnte nicht ausgelesen werden.');
-    if (!isKaufTicket) {
-      setTimeout(() => {
-        reply.delete().catch(() => {});
-        message.delete().catch(() => {});
-      }, 10_000);
-    }
-    return;
+    return message.reply('❌ Preis konnte nicht ausgelesen werden.');
   }
 
   const price = match[1].replace(',', '.');
   registeredUsers.set(userId, price);
 
-  const reply = await message.reply(`✅ Du bist registriert! Zahle hier: ${process.env.BASE_URL}/pay?userId=${userId}`);
-  if (!isKaufTicket) {
-    setTimeout(() => {
-      reply.delete().catch(() => {});
-      message.delete().catch(() => {});
-    }, 10_000);
-  }
+  message.reply(`✅ Du bist registriert! Zahle hier: ${BASE_URL}/pay?userId=${userId}`);
 });
 
-client.login(process.env.DISCORD_TOKEN);
+client.login(DISCORD_TOKEN);
 
 // === PayPal Konfiguration ===
 paypal.configure({
-  mode: 'live',
-  client_id: process.env.PAYPAL_CLIENT_ID,
-  client_secret: process.env.PAYPAL_CLIENT_SECRET
+  mode: 'live', // oder 'sandbox' für Tests
+  client_id: PAYPAL_CLIENT_ID,
+  client_secret: PAYPAL_CLIENT_SECRET
 });
 
-// === Express Server ===
+// === Express Webserver ===
 app.get('/', (req, res) => {
   res.send('🟢 Bot & Server laufen');
 });
@@ -95,8 +92,8 @@ app.get('/pay', (req, res) => {
     intent: 'sale',
     payer: { payment_method: 'paypal' },
     redirect_urls: {
-      return_url: `${process.env.BASE_URL}/success?userId=${userId}`,
-      cancel_url: `${process.env.BASE_URL}/cancel`
+      return_url: `${BASE_URL}/success?userId=${userId}`,
+      cancel_url: `${BASE_URL}/cancel`
     },
     transactions: [{
       amount: { currency: 'EUR', total: amount },
@@ -134,9 +131,9 @@ app.get('/success', async (req, res) => {
     }
 
     try {
-      const guild = await client.guilds.fetch(process.env.GUILD_ID);
+      const guild = await client.guilds.fetch(GUILD_ID);
       const member = await guild.members.fetch(userId);
-      await member.roles.add(process.env.ROLE_ID);
+      await member.roles.add(ROLE_ID);
       res.send('✅ Zahlung erfolgreich! Deine Discord-Rolle wurde vergeben.');
     } catch (err) {
       console.error('❌ Fehler beim Rollen vergeben:', err);
@@ -152,4 +149,4 @@ app.get('/cancel', (req, res) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🌐 Server läuft auf Port ${PORT}`);
-});
+});;
