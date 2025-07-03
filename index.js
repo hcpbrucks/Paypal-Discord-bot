@@ -1,13 +1,7 @@
 const express = require('express');
 const paypal = require('paypal-rest-sdk');
 const { Client, GatewayIntentBits } = require('discord.js');
-
-const DISCORD_TOKEN = 'MTM4MTM3MDkyNDEwODA5MTUzMg.GucPl3.Hu4W3PwZjCrlZo-k2r4i2jpdMPivlxxYvO44Fw';
-const GUILD_ID = '1381009607123796069';
-const ROLE_ID = '1381289636952932352';
-const PAYPAL_CLIENT_ID = 'AQYB9y5a6UIUUabcti0aRyydn90q-_IUJxKFNoqEaeZWt19wQir2zpEaABT21rD5XSYNyyniSaB2l9Pk';
-const PAYPAL_CLIENT_SECRET = 'EB6wUs5ki6kJHVkWXNCihMvRR_kC-Jbvp3U0g6EsOQ12LYtjRH6oLJSJdPlb319tAeR_qb9VoEGt2CN-';
-const BASE_URL = 'https://paypal-discord-bot.onrender.com';
+require('dotenv').config();
 
 const app = express();
 app.use(express.json());
@@ -23,11 +17,11 @@ const client = new Client({
 
 const registeredUsers = new Map();
 
+// === Discord-Login ===
 client.once('ready', () => {
-  console.log(`✅ Discord Bot ist online als ${client.user.tag}`);
+  console.log(`✅ Bot ist online als ${client.user.tag}`);
 });
 
-// Ersetzter messageCreate-Handler:
 client.on('messageCreate', async message => {
   if (message.author.bot) return;
   if (message.content.toLowerCase() !== '!register') return;
@@ -35,40 +29,53 @@ client.on('messageCreate', async message => {
   const userId = message.author.id;
   const channel = message.channel;
 
-  // ✅ Nur in Ticket-Kanälen erlauben
-  if (!channel.name.startsWith('kauf-ticket-')) {
-    return message.reply('❌ Dieser Befehl darf nur in einem Kauf-Ticket ausgeführt werden.');
-  }
+  const isKaufTicket = channel.name.startsWith('kauf-ticket-');
 
-  // ✅ Letzte Nachricht vom BotGhost oder anderem Bot lesen
   const messages = await channel.messages.fetch({ limit: 10 });
-  const last = messages.find(msg =>
-    msg.author.bot && /(\d+[.,]?\d*)€/.test(msg.content)
-  );
+  const last = messages.find(msg => msg.author.bot && /(\d+[.,]?\d*)€/.test(msg.content));
 
   if (!last) {
-    return message.reply('❌ Konnte keine Nachricht mit dem Preis finden.');
+    const reply = await message.reply('❌ Konnte keine Nachricht mit dem Preis finden.');
+    if (!isKaufTicket) {
+      setTimeout(() => {
+        reply.delete().catch(() => {});
+        message.delete().catch(() => {});
+      }, 10_000);
+    }
+    return;
   }
 
-  // ✅ Betrag extrahieren
   const match = last.content.match(/(\d+[.,]?\d*)€/);
   if (!match) {
-    return message.reply('❌ Preis konnte nicht ausgelesen werden.');
+    const reply = await message.reply('❌ Preis konnte nicht ausgelesen werden.');
+    if (!isKaufTicket) {
+      setTimeout(() => {
+        reply.delete().catch(() => {});
+        message.delete().catch(() => {});
+      }, 10_000);
+    }
+    return;
   }
 
   const price = match[1].replace(',', '.');
   registeredUsers.set(userId, price);
 
-  message.reply(`✅ Du bist registriert! Zahle hier: ${BASE_URL}/pay?userId=${userId}`);
+  const reply = await message.reply(`✅ Du bist registriert! Zahle hier: ${process.env.BASE_URL}/pay?userId=${userId}`);
+  if (!isKaufTicket) {
+    setTimeout(() => {
+      reply.delete().catch(() => {});
+      message.delete().catch(() => {});
+    }, 10_000);
+  }
 });
 
-client.login(DISCORD_TOKEN);
+client.login(process.env.DISCORD_TOKEN);
 
-// === PayPal ===
+// === PayPal Konfiguration ===
 paypal.configure({
   mode: 'live',
-  client_id: PAYPAL_CLIENT_ID,
-  client_secret: PAYPAL_CLIENT_SECRET
+  client_id: process.env.PAYPAL_CLIENT_ID,
+  client_secret: process.env.PAYPAL_CLIENT_SECRET
 });
 
 // === Express Server ===
@@ -88,8 +95,8 @@ app.get('/pay', (req, res) => {
     intent: 'sale',
     payer: { payment_method: 'paypal' },
     redirect_urls: {
-      return_url: `${BASE_URL}/success?userId=${userId}`,
-      cancel_url: `${BASE_URL}/cancel`
+      return_url: `${process.env.BASE_URL}/success?userId=${userId}`,
+      cancel_url: `${process.env.BASE_URL}/cancel`
     },
     transactions: [{
       amount: { currency: 'EUR', total: amount },
@@ -127,9 +134,9 @@ app.get('/success', async (req, res) => {
     }
 
     try {
-      const guild = await client.guilds.fetch(GUILD_ID);
+      const guild = await client.guilds.fetch(process.env.GUILD_ID);
       const member = await guild.members.fetch(userId);
-      await member.roles.add(ROLE_ID);
+      await member.roles.add(process.env.ROLE_ID);
       res.send('✅ Zahlung erfolgreich! Deine Discord-Rolle wurde vergeben.');
     } catch (err) {
       console.error('❌ Fehler beim Rollen vergeben:', err);
