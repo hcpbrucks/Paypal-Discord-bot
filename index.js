@@ -70,7 +70,7 @@ client.login(DISCORD_TOKEN);
 paypal.configure({
   mode: 'live', // WICHTIG: Sandbox-Modus
   client_id: 'AQYB9y5a6UIUUabcti0aRyydn90q-_IUJxKFNoqEaeZWt19wQir2zpEaABT21rD5XSYNyyniSaB2l9Pk',
-  client_secret: 'AQYB9y5a6UIUUabcti0aRyydn90q-_IUJxKFNoqEaeZWt19wQir2zpEaABT21rD5XSYNyyniSaB2l9Pk'
+  client_secret: 'EB6wUs5ki6kJHVkWXNCihMvRR_kC-Jbvp3U0g6EsOQ12LYtjRH6oLJSJdPlb319tAeR_qb9VoEGt2CN-'
 });
 
 // === Express Webserver ===
